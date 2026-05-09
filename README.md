@@ -8,7 +8,7 @@
 - 使用 `https://img.youtube.com/vi/{videoId}/hqdefault.jpg` 生成封面
 - 本地保存视频列表、字幕理解状态、生词本
 - 首页展示视频合集、封面、标题、理解进度
-- 学习页嵌入官方 YouTube iframe 播放器
+- 学习页暂时显示完整移动端 YouTube 网页
 - 字幕区域预留，后续接入 FastAPI transcript 服务
 - 字幕按播放时间高亮并自动滚动
 - 点击字幕可跳转播放时间
@@ -20,7 +20,7 @@
 ## 技术栈
 
 - Flutter / Dart
-- `youtube_player_iframe`
+- `webview_flutter`
 - `shared_preferences`
 - `provider`
 - `uuid`

@@ -1,18 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../models/subtitle_line.dart';
 import '../models/video_item.dart';
 import '../providers/app_state.dart';
-import '../widgets/bottom_understanding_controls.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/subtitle_list.dart';
-import '../widgets/word_lookup_sheet.dart';
-import '../widgets/youtube_player_widget.dart';
+import '../widgets/youtube_mobile_webview.dart';
 
 class VideoLearningScreen extends StatefulWidget {
   const VideoLearningScreen({super.key, required this.videoId});
@@ -24,39 +18,17 @@ class VideoLearningScreen extends StatefulWidget {
 }
 
 class _VideoLearningScreenState extends State<VideoLearningScreen> {
-  late final YoutubePlayerController _playerController;
   final ScrollController _subtitleController = ScrollController();
-  StreamSubscription<YoutubeVideoState>? _positionSubscription;
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    final video = context.read<AppState>().findVideo(widget.videoId);
-    _playerController = YoutubePlayerController.fromVideoId(
-      videoId: video?.youtubeVideoId ?? '',
-      autoPlay: false,
-      params: const YoutubePlayerParams(
-        origin: 'https://www.youtube-nocookie.com',
-        userAgent:
-            'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
-            '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        interfaceLanguage: 'zh-CN',
-        enableCaption: true,
-        showControls: true,
-        showFullscreenButton: true,
-      ),
-    );
-    _positionSubscription = _playerController.videoStateStream.listen(
-      (state) => _syncSubtitle(state.position),
-    );
   }
 
   @override
   void dispose() {
-    _positionSubscription?.cancel();
     _subtitleController.dispose();
-    _playerController.close();
     super.dispose();
   }
 
@@ -94,8 +66,6 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
 
   Future<void> _seekTo(SubtitleLine line) async {
     final appState = context.read<AppState>();
-    await _playerController.seekTo(seconds: line.start, allowSeekAhead: true);
-    await _playerController.playVideo();
     final video = appState.findVideo(widget.videoId);
     final index =
         video?.subtitles.indexWhere((item) => item.id == line.id) ?? -1;
@@ -125,11 +95,6 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       setState(() => _currentIndex = nextIndex);
       _scrollCurrentSubtitleIntoView(nextIndex);
     }
-    await _playerController.seekTo(
-      seconds: nextLine.start,
-      allowSeekAhead: true,
-    );
-    await _playerController.playVideo();
   }
 
   Future<void> _markNotUnderstood(VideoItem video) async {
@@ -143,111 +108,20 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       current.id,
       SubtitleStatus.notUnderstood,
     );
-    await _playerController.pauseVideo();
   }
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    final appState = context.read<AppState>();
     final video = appState.findVideo(widget.videoId);
 
     if (video == null) {
       return const Scaffold(body: Center(child: Text('视频不存在')));
     }
 
-    final progress = appState.calculateProgress(video.id);
-    final percent = (progress * 100).round();
-    final currentIndex = video.subtitles.isEmpty ? 0 : _boundedIndex(video);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF3EBDD),
-      bottomNavigationBar: video.subtitles.isEmpty
-          ? null
-          : BottomUnderstandingControls(
-              onNotUnderstood: () => _markNotUnderstood(video),
-              onUnderstood: () => _markUnderstood(video),
-            ),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: '返回',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                  ),
-                  Expanded(
-                    child: Text(
-                      video.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF3C2C20),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: '在 YouTube 打开',
-                    onPressed: () => launchUrl(
-                      Uri.parse(video.url),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    icon: const Icon(Icons.open_in_new_rounded),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: YoutubePlayerWidget(controller: _playerController),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
-              child: Row(
-                children: [
-                  Expanded(child: ProgressBar(value: progress, height: 12)),
-                  const SizedBox(width: 12),
-                  Text(
-                    '$percent%',
-                    style: const TextStyle(
-                      color: Color(0xFF6E5139),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SubtitleList(
-                video: video,
-                currentIndex: currentIndex,
-                controller: _subtitleController,
-                onLineTap: _seekTo,
-                onWordTap: (word) {
-                  if (video.subtitles.isEmpty) {
-                    return;
-                  }
-                  final line = video.subtitles[currentIndex];
-                  showWordLookupSheet(
-                    context: context,
-                    word: word,
-                    video: video,
-                    subtitleText: line.text,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      backgroundColor: Colors.white,
+      body: YoutubeMobileWebView(videoId: video.youtubeVideoId),
     );
   }
 
@@ -256,5 +130,61 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       return 0;
     }
     return _currentIndex.clamp(0, video.subtitles.length - 1).toInt();
+  }
+}
+
+class HiddenSubtitleLearningPanel extends StatelessWidget {
+  const HiddenSubtitleLearningPanel({
+    super.key,
+    required this.video,
+    required this.progress,
+    required this.percent,
+    required this.currentIndex,
+    required this.subtitleController,
+    required this.onLineTap,
+    required this.onWordTap,
+  });
+
+  final VideoItem video;
+  final double progress;
+  final int percent;
+  final int currentIndex;
+  final ScrollController subtitleController;
+  final ValueChanged<SubtitleLine> onLineTap;
+  final ValueChanged<String> onWordTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
+          child: Row(
+            children: [
+              Expanded(child: ProgressBar(value: progress, height: 12)),
+              const SizedBox(width: 12),
+              Text(
+                '$percent%',
+                style: const TextStyle(
+                  color: Color(0xFF6E5139),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SubtitleList(
+            video: video,
+            currentIndex: currentIndex,
+            controller: subtitleController,
+            onLineTap: onLineTap,
+            onWordTap: onWordTap,
+          ),
+        ),
+      ],
+    );
   }
 }
