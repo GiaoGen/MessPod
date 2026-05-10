@@ -27,7 +27,7 @@ class DictionaryService {
       word: normalized,
       meaning: meaning,
       fullMeaning: _meanings.containsKey(normalized)
-          ? '$normalized：$meaning。MVP 释义：可结合字幕原句记忆，并在复习时反复听原音。'
+          ? '$normalized：$meaning。MVP 释义：结合字幕原句记忆，并在复习时反复听原音。'
           : '$normalized：暂未收录完整释义。MVP 后续可以接入真实词典 API、例句和发音。',
     );
   }

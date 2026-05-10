@@ -5,14 +5,14 @@ class ProgressBar extends StatelessWidget {
     super.key,
     required this.value,
     this.height = 10,
-    this.backgroundColor = const Color(0xFFE1D3BE),
-    this.foregroundColor = const Color(0xFF7D8A5E),
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   final double value;
   final double height;
-  final Color backgroundColor;
-  final Color foregroundColor;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +21,11 @@ class ProgressBar extends StatelessWidget {
       child: LinearProgressIndicator(
         minHeight: height,
         value: value.clamp(0, 1),
-        backgroundColor: backgroundColor,
-        valueColor: AlwaysStoppedAnimation(foregroundColor),
+        backgroundColor:
+            backgroundColor ?? Theme.of(context).colorScheme.outlineVariant,
+        valueColor: AlwaysStoppedAnimation(
+          foregroundColor ?? const Color(0xFF7D8A5E),
+        ),
       ),
     );
   }

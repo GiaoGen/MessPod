@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_state.dart';
+import '../services/transcript_api_service.dart';
 import 'progress_bar.dart';
 
 Future<void> showAddVideoSheet(BuildContext context) {
@@ -26,7 +27,7 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
   bool _isParsing = false;
   String? _error;
 
-  static const _labels = ['正在解析链接', '正在创建播放项', '正在保存', '完成'];
+  static const _labels = ['正在解析链接', '正在获取视频信息', '正在获取字幕', '正在保存', '完成'];
 
   @override
   void dispose() {
@@ -39,7 +40,7 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
     setState(() {
       _isParsing = true;
       _error = null;
-      _step = const ParseStep(label: '准备解析', index: 0, total: 4);
+      _step = const ParseStep(label: '准备解析', index: 0, total: 5);
     });
 
     try {
@@ -65,12 +66,20 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
         _error = error.message;
         _isParsing = false;
       });
+    } on TranscriptApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = error.message;
+        _isParsing = false;
+      });
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _error = '解析失败，请稍后再试';
+        _error = '解析失败，请确认 FastAPI 服务已启动且视频有字幕';
         _isParsing = false;
       });
     }
@@ -78,6 +87,7 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final progress = _step?.progress ?? 0;
 
@@ -86,7 +96,7 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFAF1),
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(34),
         ),
         child: SafeArea(
@@ -100,16 +110,16 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
                   width: 42,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD8C8B1),
+                    color: scheme.outlineVariant,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 '添加 YouTube 链接',
                 style: TextStyle(
-                  color: Color(0xFF3C2C20),
+                  color: scheme.onSurface,
                   fontSize: 23,
                   fontWeight: FontWeight.w900,
                 ),
@@ -124,7 +134,7 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
                 decoration: InputDecoration(
                   hintText: 'https://www.youtube.com/watch?v=...',
                   filled: true,
-                  fillColor: const Color(0xFFF3EBDD),
+                  fillColor: scheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(26),
                     borderSide: BorderSide.none,
@@ -139,8 +149,8 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
                 const SizedBox(height: 10),
                 Text(
                   _error!,
-                  style: const TextStyle(
-                    color: Color(0xFFB25B4F),
+                  style: TextStyle(
+                    color: scheme.error,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -165,15 +175,15 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
                           size: 20,
                           color: done || current
                               ? const Color(0xFF7D8A5E)
-                              : const Color(0xFFB7A58E),
+                              : scheme.outline,
                         ),
                         const SizedBox(width: 10),
                         Text(
                           _labels[index],
                           style: TextStyle(
                             color: current
-                                ? const Color(0xFF3C2C20)
-                                : const Color(0xFF7B6048),
+                                ? scheme.onSurface
+                                : scheme.onSurfaceVariant,
                             fontSize: 15,
                             fontWeight: current
                                 ? FontWeight.w800
@@ -191,8 +201,8 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
                 height: 56,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF6E5139),
-                    foregroundColor: const Color(0xFFFFFAF1),
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),

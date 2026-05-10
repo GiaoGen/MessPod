@@ -32,7 +32,7 @@ class YoutubeService {
   }
 
   String buildThumbnailUrl(String videoId) {
-    return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+    return 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg';
   }
 
   String? _normalizeId(String value) {

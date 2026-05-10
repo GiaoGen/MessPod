@@ -18,11 +18,13 @@ class SubtitleLineWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final statusColor = switch (line.status) {
       SubtitleStatus.understood => const Color(0xFF6F7D4E),
       SubtitleStatus.notUnderstood => const Color(0xFFB25B4F),
       SubtitleStatus.unknown => const Color(0xFFB7A58E),
     };
+    final understood = line.status == SubtitleStatus.understood;
     final icon = switch (line.status) {
       SubtitleStatus.understood => Icons.check_circle_rounded,
       SubtitleStatus.notUnderstood => Icons.cancel_rounded,
@@ -36,13 +38,11 @@ class SubtitleLineWidget extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isCurrent ? const Color(0xFF4E3A2C) : const Color(0xFFFFFAF1),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: isCurrent
-                ? const Color(0xFF4E3A2C)
-                : const Color(0xFFE1D3BE),
+            color: isCurrent ? scheme.inverseSurface : scheme.outlineVariant,
           ),
+          color: isCurrent ? scheme.inverseSurface : scheme.surface,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +51,7 @@ class SubtitleLineWidget extends StatelessWidget {
               padding: const EdgeInsets.only(top: 3),
               child: Icon(
                 icon,
-                color: isCurrent ? const Color(0xFFF3EBDD) : statusColor,
+                color: isCurrent ? scheme.onInverseSurface : statusColor,
               ),
             ),
             const SizedBox(width: 12),
@@ -65,24 +65,30 @@ class SubtitleLineWidget extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 6),
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: clickable ? () => onWordTap(word) : null,
+                      onTap: clickable
+                          ? () {
+                              onTap();
+                              onWordTap(word);
+                            }
+                          : onTap,
                       child: Text(
                         token,
                         style: TextStyle(
                           color: isCurrent
-                              ? const Color(0xFFFFFAF1)
-                              : const Color(0xFF3C2C20),
+                              ? scheme.onInverseSurface
+                              : scheme.onSurface,
                           fontSize: isCurrent ? 21 : 19,
                           height: 1.35,
                           fontWeight: isCurrent
                               ? FontWeight.w900
                               : FontWeight.w700,
-                          decoration: clickable
-                              ? TextDecoration.underline
+                          decoration: understood
+                              ? TextDecoration.lineThrough
                               : TextDecoration.none,
                           decorationColor: isCurrent
-                              ? const Color(0xFFD8C8B1)
-                              : const Color(0xFF9A8764),
+                              ? scheme.onInverseSurface
+                              : scheme.secondary,
+                          decorationThickness: understood ? 2.2 : 1.0,
                         ),
                       ),
                     ),

@@ -6,6 +6,7 @@ import '../models/video_item.dart';
 import '../models/vocabulary_item.dart';
 import '../services/dictionary_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/transcript_api_service.dart';
 import '../services/youtube_service.dart';
 
 class ParseStep {
@@ -27,14 +28,17 @@ class AppState extends ChangeNotifier {
     LocalStorageService? localStorageService,
     YoutubeService? youtubeService,
     DictionaryService? dictionaryService,
+    TranscriptApiService? transcriptApiService,
   }) : _storage = localStorageService ?? LocalStorageService(),
        _youtube = youtubeService ?? YoutubeService(),
+       _transcriptApi = transcriptApiService ?? TranscriptApiService(),
        dictionary = dictionaryService ?? DictionaryService() {
     load();
   }
 
   final LocalStorageService _storage;
   final YoutubeService _youtube;
+  final TranscriptApiService _transcriptApi;
   final DictionaryService dictionary;
   final Uuid _uuid = const Uuid();
 
@@ -58,7 +62,7 @@ class AppState extends ChangeNotifier {
     String url, {
     ValueChanged<ParseStep>? onProgress,
   }) async {
-    const steps = ['正在解析链接', '正在创建播放项', '正在保存', '完成'];
+    const steps = ['正在解析链接', '正在获取视频信息', '正在获取字幕', '正在保存', '完成'];
 
     void report(int index) {
       onProgress?.call(
@@ -67,33 +71,53 @@ class AppState extends ChangeNotifier {
     }
 
     report(0);
-    await Future<void>.delayed(const Duration(milliseconds: 260));
+    await Future<void>.delayed(const Duration(milliseconds: 180));
     final videoId = _youtube.extractVideoId(url);
     if (videoId == null) {
       throw FormatException('请输入有效的 YouTube 链接');
     }
 
     report(1);
-    await Future<void>.delayed(const Duration(milliseconds: 220));
+    await Future<void>.delayed(const Duration(milliseconds: 120));
 
     report(2);
+    final payload = await _transcriptApi.fetchVideo(videoId);
+    if (payload.subtitles.isEmpty) {
+      throw const TranscriptApiException('没有获取到字幕');
+    }
+
+    final videoLocalId = _uuid.v4();
+    final subtitles = payload.subtitles.map((line) {
+      return SubtitleLine(
+        id: _uuid.v4(),
+        videoId: videoLocalId,
+        start: line.start,
+        duration: line.duration,
+        text: line.text,
+      );
+    }).toList();
+
+    report(3);
     final video = VideoItem(
-      id: _uuid.v4(),
+      id: videoLocalId,
       youtubeVideoId: videoId,
       url: url.trim(),
-      title: 'YouTube 视频 - $videoId',
+      title: payload.title,
       thumbnailUrl: _youtube.buildThumbnailUrl(videoId),
-      durationSeconds: 0,
-      subtitles: const [],
+      durationSeconds: payload.durationSeconds,
+      subtitles: subtitles,
       createdAt: DateTime.now(),
+      lastPositionSeconds: 0,
+      subtitleOffsetSeconds: 0,
+      subtitleAutoScrollEnabled: true,
     );
 
     _videos = [video, ..._videos];
     await _storage.saveVideos(_videos);
     notifyListeners();
 
-    report(3);
-    await Future<void>.delayed(const Duration(milliseconds: 280));
+    report(4);
+    await Future<void>.delayed(const Duration(milliseconds: 180));
     return video;
   }
 
@@ -104,6 +128,12 @@ class AppState extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  Future<void> removeVideo(String videoId) async {
+    _videos = _videos.where((video) => video.id != videoId).toList();
+    await _storage.saveVideos(_videos);
+    notifyListeners();
   }
 
   Future<void> updateSubtitleStatus(
@@ -124,6 +154,56 @@ class AppState extends ChangeNotifier {
       }).toList();
 
       return video.copyWith(subtitles: subtitles);
+    }).toList();
+
+    await _storage.saveVideos(_videos);
+    notifyListeners();
+  }
+
+  Future<void> updateVideoPosition(
+    String videoId,
+    double positionSeconds, {
+    String? subtitleId,
+  }) async {
+    _videos = _videos.map((video) {
+      if (video.id != videoId) {
+        return video;
+      }
+      return video.copyWith(
+        lastPositionSeconds: positionSeconds,
+        lastSubtitleId: subtitleId,
+      );
+    }).toList();
+
+    await _storage.saveVideos(_videos);
+  }
+
+  Future<void> updateSubtitleOffset(
+    String videoId,
+    double offsetSeconds,
+  ) async {
+    _videos = _videos.map((video) {
+      if (video.id != videoId) {
+        return video;
+      }
+      return video.copyWith(
+        subtitleOffsetSeconds: offsetSeconds.clamp(-5, 5).toDouble(),
+      );
+    }).toList();
+
+    await _storage.saveVideos(_videos);
+    notifyListeners();
+  }
+
+  Future<void> updateSubtitleAutoScroll(
+    String videoId,
+    bool enabled,
+  ) async {
+    _videos = _videos.map((video) {
+      if (video.id != videoId) {
+        return video;
+      }
+      return video.copyWith(subtitleAutoScrollEnabled: enabled);
     }).toList();
 
     await _storage.saveVideos(_videos);

@@ -10,17 +10,18 @@ class VocabularyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final items = appState.vocabularyItems;
+    final scheme = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: CustomScrollView(
         slivers: [
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
               child: Text(
                 '生词本',
                 style: TextStyle(
-                  color: Color(0xFF3C2C20),
+                  color: scheme.onSurface,
                   fontSize: 30,
                   fontWeight: FontWeight.w900,
                 ),
@@ -28,16 +29,16 @@ class VocabularyScreen extends StatelessWidget {
             ),
           ),
           if (items.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
                 child: Padding(
-                  padding: EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(28),
                   child: Text(
                     '还没有收藏的单词\n在字幕里点单词即可加入',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF7B6048),
+                      color: scheme.primary,
                       fontSize: 18,
                       height: 1.6,
                       fontWeight: FontWeight.w700,
@@ -57,7 +58,7 @@ class VocabularyScreen extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFAF1),
+                      color: scheme.surface,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Column(
@@ -68,8 +69,8 @@ class VocabularyScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 item.word,
-                                style: const TextStyle(
-                                  color: Color(0xFF3C2C20),
+                                style: TextStyle(
+                                  color: scheme.onSurface,
                                   fontSize: 23,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -78,8 +79,9 @@ class VocabularyScreen extends StatelessWidget {
                             IconButton.filledTonal(
                               tooltip: '取消收藏',
                               style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFFF3EBDD),
-                                foregroundColor: const Color(0xFF8D4C42),
+                                backgroundColor:
+                                    scheme.surfaceContainerHighest,
+                                foregroundColor: scheme.error,
                               ),
                               onPressed: () =>
                                   appState.removeVocabulary(item.id),
@@ -90,8 +92,8 @@ class VocabularyScreen extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           item.meaning,
-                          style: const TextStyle(
-                            color: Color(0xFF6E5139),
+                          style: TextStyle(
+                            color: scheme.primary,
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
                           ),
@@ -101,8 +103,8 @@ class VocabularyScreen extends StatelessWidget {
                           item.sourceVideoTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF7B6048),
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
@@ -110,8 +112,8 @@ class VocabularyScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           item.sourceSubtitleText,
-                          style: const TextStyle(
-                            color: Color(0xFF3C2C20),
+                          style: TextStyle(
+                            color: scheme.onSurface,
                             fontSize: 16,
                             height: 1.4,
                           ),
@@ -119,8 +121,8 @@ class VocabularyScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           _formatTime(item.createdAt),
-                          style: const TextStyle(
-                            color: Color(0xFF9A8764),
+                          style: TextStyle(
+                            color: scheme.secondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
