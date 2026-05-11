@@ -20,7 +20,6 @@ SENTENCE_PART_RE = re.compile(
 SENTENCE_END_RE = re.compile(
     r"[\.\!\?\u3002\uff01\uff1f]+[\"'\u201d\u2019\)\]]*$"
 )
-MAX_MERGED_CHARS = 120
 MAX_GAP_SECONDS = 1.4
 THUMBNAIL_URLS = [
     "https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
@@ -135,7 +134,9 @@ def merge_transcript_snippets(transcript) -> List[Dict]:
         end = float(snippet.start + snippet.duration)
         gap = 0 if previous_end is None else start - previous_end
 
-        if current_text and gap > MAX_GAP_SECONDS:
+        if current_text and gap > MAX_GAP_SECONDS and is_sentence_complete(
+            current_text
+        ):
             append_subtitle_line(lines, current_start, current_end, current_text)
             current_text = []
             current_start = None
@@ -154,8 +155,7 @@ def merge_transcript_snippets(transcript) -> List[Dict]:
             current_text.append(part)
             current_end = part_end
 
-            merged_text = " ".join(current_text)
-            if SENTENCE_END_RE.search(part) or len(merged_text) >= MAX_MERGED_CHARS:
+            if SENTENCE_END_RE.search(part):
                 append_subtitle_line(lines, current_start, current_end, current_text)
                 current_text = []
                 current_start = None
@@ -172,6 +172,10 @@ def merge_transcript_snippets(transcript) -> List[Dict]:
 def split_text_by_sentence_end(text: str) -> List[str]:
     parts = [match.group(0).strip() for match in SENTENCE_PART_RE.finditer(text)]
     return [part for part in parts if part]
+
+
+def is_sentence_complete(text_parts: List[str]) -> bool:
+    return bool(SENTENCE_END_RE.search(" ".join(text_parts).strip()))
 
 
 def estimate_part_end(start: float, end: float, parts: List[str], index: int) -> float:

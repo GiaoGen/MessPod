@@ -24,10 +24,22 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   final YoutubeWebPlaybackController _playbackController =
       YoutubeWebPlaybackController();
   final ValueNotifier<int> _currentIndexNotifier = ValueNotifier<int>(0);
+  Timer? _contentMountTimer;
   int _currentIndex = 0;
   bool _restoredPosition = false;
+  bool _contentMounted = false;
   String? _initializedVideoId;
   AppState? _appState;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentMountTimer = Timer(const Duration(milliseconds: 320), () {
+      if (mounted) {
+        setState(() => _contentMounted = true);
+      }
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -56,6 +68,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
         ),
       );
     }
+    _contentMountTimer?.cancel();
     _subtitleController.dispose();
     _currentIndexNotifier.dispose();
     super.dispose();
@@ -178,44 +191,47 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     }
 
     final progress = appState.calculateProgress(video.id);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: YoutubeMobileWebView(
-              videoId: video.youtubeVideoId,
-              playbackController: _playbackController,
-              onPositionChanged: _syncSubtitle,
-            ),
-          ),
-          ValueListenableBuilder<int>(
-            valueListenable: _currentIndexNotifier,
-            builder: (context, currentIndex, _) {
-              return SplitSubtitleOverlay(
-                visible: true,
-                video: video,
-                progress: progress,
-                percent: (progress * 100).round(),
-                currentIndex: video.subtitles.isEmpty
-                    ? 0
-                    : _boundedIndexFor(video, currentIndex),
-                subtitleController: _subtitleController,
-                onLineTap: _seekTo,
-                onWordTap: (line, word) => _lookupWord(line, word, video),
-                onNotUnderstood: () => _markNotUnderstood(video),
-                onUnderstood: () => _markUnderstood(video),
-                onOffsetChanged: (offset) =>
-                    appState.updateSubtitleOffset(video.id, offset),
-                autoScrollEnabled: video.subtitleAutoScrollEnabled,
-                onAutoScrollChanged: (enabled) =>
-                    appState.updateSubtitleAutoScroll(video.id, enabled),
-              );
-            },
-          ),
-        ],
-      ),
+      backgroundColor: scheme.surface,
+      body: _contentMounted
+          ? Stack(
+              children: [
+                Positioned.fill(
+                  child: YoutubeMobileWebView(
+                    videoId: video.youtubeVideoId,
+                    playbackController: _playbackController,
+                    onPositionChanged: _syncSubtitle,
+                  ),
+                ),
+                ValueListenableBuilder<int>(
+                  valueListenable: _currentIndexNotifier,
+                  builder: (context, currentIndex, _) {
+                    return SplitSubtitleOverlay(
+                      visible: true,
+                      video: video,
+                      progress: progress,
+                      percent: (progress * 100).round(),
+                      currentIndex: video.subtitles.isEmpty
+                          ? 0
+                          : _boundedIndexFor(video, currentIndex),
+                      subtitleController: _subtitleController,
+                      onLineTap: _seekTo,
+                      onWordTap: (line, word) => _lookupWord(line, word, video),
+                      onNotUnderstood: () => _markNotUnderstood(video),
+                      onUnderstood: () => _markUnderstood(video),
+                      onOffsetChanged: (offset) =>
+                          appState.updateSubtitleOffset(video.id, offset),
+                      autoScrollEnabled: video.subtitleAutoScrollEnabled,
+                      onAutoScrollChanged: (enabled) =>
+                          appState.updateSubtitleAutoScroll(video.id, enabled),
+                    );
+                  },
+                ),
+              ],
+            )
+          : ColoredBox(color: scheme.surface),
     );
   }
 
