@@ -8,6 +8,8 @@ import '../models/vocabulary_item.dart';
 class LocalStorageService {
   static const _videosKey = 'videos';
   static const _vocabularyKey = 'vocabulary';
+  static const _dailyStudySecondsKey = 'dailyStudySeconds';
+  static const _dailyTargetMinutesKey = 'dailyTargetMinutes';
 
   Future<List<VideoItem>> loadVideos() async {
     final prefs = await SharedPreferences.getInstance();
@@ -49,5 +51,33 @@ class LocalStorageService {
       _vocabularyKey,
       jsonEncode(vocabulary.map((item) => item.toJson()).toList()),
     );
+  }
+
+  Future<Map<String, int>> loadDailyStudySeconds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_dailyStudySecondsKey);
+    if (raw == null || raw.isEmpty) {
+      return {};
+    }
+
+    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+    return decoded.map(
+      (key, value) => MapEntry(key, (value as num).round()),
+    );
+  }
+
+  Future<void> saveDailyStudySeconds(Map<String, int> secondsByDate) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dailyStudySecondsKey, jsonEncode(secondsByDate));
+  }
+
+  Future<int> loadDailyTargetMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_dailyTargetMinutesKey) ?? 30;
+  }
+
+  Future<void> saveDailyTargetMinutes(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_dailyTargetMinutesKey, minutes);
   }
 }

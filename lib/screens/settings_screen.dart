@@ -98,6 +98,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Row(
                   children: [
+                    Icon(Icons.flag_rounded, color: scheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '每日目标',
+                        style: TextStyle(
+                          color: scheme.onSurface,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${appState.dailyTargetMinutes} 分钟',
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      tooltip: '减少目标',
+                      onPressed: appState.dailyTargetMinutes <= 5
+                          ? null
+                          : () => appState.updateDailyTargetMinutes(
+                                appState.dailyTargetMinutes - 5,
+                              ),
+                      icon: const Icon(Icons.remove_rounded),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: LinearProgressIndicator(
+                          value: (appState.dailyTargetMinutes / 120)
+                              .clamp(0.0, 1.0),
+                          minHeight: 10,
+                          borderRadius: BorderRadius.circular(999),
+                          color: scheme.primary,
+                          backgroundColor: scheme.surfaceContainerHighest,
+                        ),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: '增加目标',
+                      onPressed: appState.dailyTargetMinutes >= 120
+                          ? null
+                          : () => appState.updateDailyTargetMinutes(
+                                appState.dailyTargetMinutes + 5,
+                              ),
+                      icon: const Icon(Icons.add_rounded),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SettingsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
                     Icon(Icons.menu_book_rounded, color: scheme.primary),
                     const SizedBox(width: 12),
                     Expanded(

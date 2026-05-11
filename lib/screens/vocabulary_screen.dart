@@ -12,7 +12,8 @@ class VocabularyScreen extends StatefulWidget {
   State<VocabularyScreen> createState() => _VocabularyScreenState();
 }
 
-class _VocabularyScreenState extends State<VocabularyScreen> {
+class _VocabularyScreenState extends State<VocabularyScreen>
+    with SingleTickerProviderStateMixin {
   final Set<String> _expandedWords = {};
 
   @override
@@ -121,29 +122,40 @@ class _VocabularyScreenState extends State<VocabularyScreen> {
                                     }
                                   });
                                 },
-                                icon: Icon(
-                                  expanded
-                                      ? Icons.keyboard_arrow_up_rounded
-                                      : Icons.keyboard_arrow_down_rounded,
+                                icon: AnimatedRotation(
+                                  turns: expanded ? 0.5 : 0,
+                                  duration: const Duration(milliseconds: 180),
+                                  curve: Curves.easeOutCubic,
+                                  child: const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          if (expanded) ...[
-                            Divider(
-                              height: 8,
-                              color: scheme.outlineVariant.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            for (final item in group.items)
-                              _VocabularySourceRow(
-                                item: item,
-                                onRemove: () =>
-                                    appState.removeVocabulary(item.id),
-                              ),
-                          ],
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.topCenter,
+                            child: expanded
+                                ? Column(
+                                    children: [
+                                      Divider(
+                                        height: 8,
+                                        color: scheme.outlineVariant
+                                            .withValues(alpha: 0.5),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      for (final item in group.items)
+                                        _VocabularySourceRow(
+                                          item: item,
+                                          onRemove: () => appState
+                                              .removeVocabulary(item.id),
+                                        ),
+                                    ],
+                                  )
+                                : const SizedBox(width: double.infinity),
+                          ),
                         ],
                       ),
                     ),

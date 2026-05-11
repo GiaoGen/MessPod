@@ -47,19 +47,32 @@ class AppState extends ChangeNotifier {
 
   List<VideoItem> _videos = [];
   List<VocabularyItem> _vocabularyItems = [];
+  Map<String, int> _dailyStudySeconds = {};
+  int _dailyTargetMinutes = 30;
   bool _isReady = false;
   bool _disposed = false;
   Timer? _videosSaveTimer;
   Timer? _vocabularySaveTimer;
+  Timer? _statsSaveTimer;
 
   List<VideoItem> get videos => List.unmodifiable(_videos);
   List<VocabularyItem> get vocabularyItems =>
       List.unmodifiable(_vocabularyItems);
+  Map<String, int> get dailyStudySeconds =>
+      Map.unmodifiable(_dailyStudySeconds);
+  int get dailyTargetMinutes => _dailyTargetMinutes;
+  int get totalStudySeconds =>
+      _dailyStudySeconds.values.fold(0, (total, seconds) => total + seconds);
+  int get todayStudySeconds => studySecondsForDate(DateTime.now());
   bool get isReady => _isReady;
 
   Future<void> load() async {
     _videos = await _storage.loadVideos();
     _vocabularyItems = await _storage.loadVocabulary();
+    _dailyStudySeconds = await _storage.loadDailyStudySeconds();
+    _dailyTargetMinutes = (await _storage.loadDailyTargetMinutes())
+        .clamp(5, 120)
+        .toInt();
     if (_disposed) {
       return;
     }
@@ -162,6 +175,7 @@ class AppState extends ChangeNotifier {
     String subtitleId,
     SubtitleStatus status,
   ) async {
+    var recordedSeconds = 0;
     _videos = _videos.map((video) {
       if (video.id != videoId) {
         return video;
@@ -171,12 +185,19 @@ class AppState extends ChangeNotifier {
         if (line.id != subtitleId) {
           return line;
         }
+        if (line.status == SubtitleStatus.unknown &&
+            status != SubtitleStatus.unknown) {
+          recordedSeconds = line.duration.round().clamp(1, 3600).toInt();
+        }
         return line.copyWith(status: status);
       }).toList();
 
       return video.copyWith(subtitles: subtitles);
     }).toList();
 
+    if (recordedSeconds > 0) {
+      _addStudySeconds(recordedSeconds);
+    }
     _scheduleSaveVideos();
     notifyListeners();
   }
@@ -302,13 +323,33 @@ class AppState extends ChangeNotifier {
     return result;
   }
 
+  int studySecondsForDate(DateTime date) {
+    return _dailyStudySeconds[_dateKey(date)] ?? 0;
+  }
+
+  double progressForDate(DateTime date) {
+    final targetSeconds = _dailyTargetMinutes * 60;
+    if (targetSeconds <= 0) {
+      return 0;
+    }
+    return (studySecondsForDate(date) / targetSeconds).clamp(0.0, 1.0);
+  }
+
+  Future<void> updateDailyTargetMinutes(int minutes) async {
+    _dailyTargetMinutes = minutes.clamp(5, 120).toInt();
+    await _storage.saveDailyTargetMinutes(_dailyTargetMinutes);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _disposed = true;
     _videosSaveTimer?.cancel();
     _vocabularySaveTimer?.cancel();
+    _statsSaveTimer?.cancel();
     unawaited(_storage.saveVideos(_videos));
     unawaited(_storage.saveVocabulary(_vocabularyItems));
+    unawaited(_storage.saveDailyStudySeconds(_dailyStudySeconds));
     super.dispose();
   }
 
@@ -324,5 +365,25 @@ class AppState extends ChangeNotifier {
     _vocabularySaveTimer = Timer(const Duration(milliseconds: 350), () {
       unawaited(_storage.saveVocabulary(_vocabularyItems));
     });
+  }
+
+  void _addStudySeconds(int seconds) {
+    final key = _dateKey(DateTime.now());
+    _dailyStudySeconds = {
+      ..._dailyStudySeconds,
+      key: (_dailyStudySeconds[key] ?? 0) + seconds,
+    };
+    _scheduleSaveStats();
+  }
+
+  void _scheduleSaveStats() {
+    _statsSaveTimer?.cancel();
+    _statsSaveTimer = Timer(const Duration(milliseconds: 650), () {
+      unawaited(_storage.saveDailyStudySeconds(_dailyStudySeconds));
+    });
+  }
+
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
