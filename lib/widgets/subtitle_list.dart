@@ -28,11 +28,12 @@ class SubtitleList extends StatefulWidget {
 }
 
 class _SubtitleListState extends State<SubtitleList> {
-  static const double _estimatedLineExtent = 132;
+  static const double _minEstimatedLineExtent = 132;
 
-  final Map<String, GlobalKey> _lineKeys = {};
+  final GlobalKey _currentLineKey = GlobalKey();
   bool _isUserScrolling = false;
   bool _isAutoScrolling = false;
+  int? _queuedScrollIndex;
 
   @override
   void initState() {
@@ -44,7 +45,6 @@ class _SubtitleListState extends State<SubtitleList> {
   void didUpdateWidget(SubtitleList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.video.id != widget.video.id) {
-      _lineKeys.clear();
       _scheduleEnsureCurrentVisible(animated: false);
     } else if (oldWidget.currentIndex != widget.currentIndex) {
       _scheduleEnsureCurrentVisible();
@@ -65,33 +65,42 @@ class _SubtitleListState extends State<SubtitleList> {
       _scheduleEnsureCurrentVisible(animated: animated);
       return;
     }
+    if (_isAutoScrolling) {
+      _queuedScrollIndex = widget.currentIndex;
+      return;
+    }
 
     final index = widget.currentIndex.clamp(
       0,
       widget.video.subtitles.length - 1,
     ).toInt();
-    final line = widget.video.subtitles[index];
-    final context = _lineKeys[line.id]?.currentContext;
-    if (context != null) {
+    final position = widget.controller.position;
+    final currentContext = _currentLineKey.currentContext;
+    if (currentContext != null) {
       _isAutoScrolling = true;
       try {
         await Scrollable.ensureVisible(
-          context,
+          currentContext,
           duration:
-              animated ? const Duration(milliseconds: 220) : Duration.zero,
+              animated ? const Duration(milliseconds: 140) : Duration.zero,
           curve: Curves.easeOutCubic,
-          alignment: 0.5,
+          alignment: 0.35,
           alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
         );
       } finally {
         _isAutoScrolling = false;
+        _flushQueuedScroll(index);
       }
       return;
     }
 
-    final position = widget.controller.position;
+    final averageExtent =
+        ((position.maxScrollExtent + position.viewportDimension) /
+                widget.video.subtitles.length)
+            .clamp(_minEstimatedLineExtent, 260.0)
+            .toDouble();
     final targetOffset =
-        index * _estimatedLineExtent - position.viewportDimension * 0.45;
+        index * averageExtent - position.viewportDimension * 0.35;
     final offset = targetOffset
         .clamp(position.minScrollExtent, position.maxScrollExtent)
         .toDouble();
@@ -101,7 +110,7 @@ class _SubtitleListState extends State<SubtitleList> {
       if (animated) {
         await widget.controller.animateTo(
           offset,
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 160),
           curve: Curves.easeOutCubic,
         );
       } else {
@@ -109,11 +118,29 @@ class _SubtitleListState extends State<SubtitleList> {
       }
     } finally {
       _isAutoScrolling = false;
+      _flushQueuedScroll(index);
+      _scheduleCurrentContextCalibration();
     }
   }
 
-  GlobalKey _keyFor(SubtitleLine line) {
-    return _lineKeys.putIfAbsent(line.id, GlobalKey.new);
+  void _scheduleCurrentContextCalibration() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isUserScrolling || _isAutoScrolling) {
+        return;
+      }
+      if (_currentLineKey.currentContext != null) {
+        _ensureCurrentVisible(animated: false);
+      }
+    });
+  }
+
+  void _flushQueuedScroll(int currentIndex) {
+    if (_queuedScrollIndex != null && _queuedScrollIndex != currentIndex) {
+      _queuedScrollIndex = null;
+      _scheduleEnsureCurrentVisible();
+    } else {
+      _queuedScrollIndex = null;
+    }
   }
 
   @override
@@ -152,11 +179,12 @@ class _SubtitleListState extends State<SubtitleList> {
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final line = widget.video.subtitles[index];
+          final isCurrent = index == widget.currentIndex;
           return KeyedSubtree(
-            key: _keyFor(line),
+            key: isCurrent ? _currentLineKey : ValueKey(line.id),
             child: SubtitleLineWidget(
               line: line,
-              isCurrent: index == widget.currentIndex,
+              isCurrent: isCurrent,
               onTap: () => widget.onLineTap(line),
               onWordTap: (word) => widget.onWordTap(line, word),
             ),

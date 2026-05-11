@@ -64,6 +64,7 @@ class DictionaryService {
   };
 
   final Map<String, int> _index = {};
+  final Map<String, DictionaryEntry> _lookupCache = {};
   Directory? _dictionaryDirectory;
   String? _dictionaryName;
   int? _dictionaryEntryCount;
@@ -78,6 +79,7 @@ class DictionaryService {
     final manifestFile = File('${directory.path}/$_manifestFileName');
 
     _index.clear();
+    _lookupCache.clear();
     if (await indexFile.exists()) {
       await _loadIndexFile(indexFile);
     }
@@ -98,8 +100,17 @@ class DictionaryService {
     }
 
     for (final candidate in _lookupCandidates(normalized)) {
+      final cached = _lookupCache[candidate] ?? _lookupCache[normalized];
+      if (cached != null) {
+        return cached;
+      }
+
       final local = _lookupLocal(candidate);
       if (local != null) {
+        _cacheLookup(normalized, local);
+        if (candidate != normalized) {
+          _cacheLookup(candidate, local);
+        }
         return local;
       }
     }
@@ -517,6 +528,7 @@ class DictionaryService {
     _index
       ..clear()
       ..addAll(nextIndex);
+    _lookupCache.clear();
     _dictionaryName = name;
     _dictionaryEntryCount = entryCount;
 
@@ -608,6 +620,13 @@ class DictionaryService {
           ? '$normalized：$meaning。MVP 释义：结合字幕原句记忆，并在复习时反复听原音。'
           : '$normalized：本地词典未收录。后续可以导入由 MDX 转换出的 JSONL/.dict 词典。',
     );
+  }
+
+  void _cacheLookup(String key, DictionaryEntry entry) {
+    if (_lookupCache.length > 160) {
+      _lookupCache.clear();
+    }
+    _lookupCache[key] = entry;
   }
 
   static String normalizeWord(String word) {

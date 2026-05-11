@@ -61,8 +61,6 @@ class YoutubeWebPlaybackController {
         (() => {
           const video = document.querySelector("video");
           if (!video) return null;
-          video.muted = false;
-          video.volume = 1;
           return video.currentTime;
         })();
       ''');
@@ -108,6 +106,7 @@ class YoutubeMobileWebView extends StatefulWidget {
 class _YoutubeMobileWebViewState extends State<YoutubeMobileWebView> {
   late final WebViewController _controller;
   Timer? _positionTimer;
+  bool _positionRequestInFlight = false;
 
   @override
   void initState() {
@@ -117,7 +116,7 @@ class _YoutubeMobileWebViewState extends State<YoutubeMobileWebView> {
       ..setBackgroundColor(Colors.transparent)
       ..loadRequest(_watchUri(widget.videoId));
     widget.playbackController._attach(_controller);
-    _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+    _positionTimer = Timer.periodic(const Duration(milliseconds: 650), (_) {
       _emitCurrentPosition();
     });
   }
@@ -140,7 +139,12 @@ class _YoutubeMobileWebViewState extends State<YoutubeMobileWebView> {
   }
 
   Future<void> _emitCurrentPosition() async {
+    if (_positionRequestInFlight) {
+      return;
+    }
+    _positionRequestInFlight = true;
     final seconds = await widget.playbackController.currentTime();
+    _positionRequestInFlight = false;
     if (seconds == null || !mounted) {
       return;
     }

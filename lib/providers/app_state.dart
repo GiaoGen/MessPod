@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -47,6 +48,9 @@ class AppState extends ChangeNotifier {
   List<VideoItem> _videos = [];
   List<VocabularyItem> _vocabularyItems = [];
   bool _isReady = false;
+  bool _disposed = false;
+  Timer? _videosSaveTimer;
+  Timer? _vocabularySaveTimer;
 
   List<VideoItem> get videos => List.unmodifiable(_videos);
   List<VocabularyItem> get vocabularyItems =>
@@ -54,11 +58,25 @@ class AppState extends ChangeNotifier {
   bool get isReady => _isReady;
 
   Future<void> load() async {
-    await dictionary.load();
     _videos = await _storage.loadVideos();
     _vocabularyItems = await _storage.loadVocabulary();
+    if (_disposed) {
+      return;
+    }
     _isReady = true;
     notifyListeners();
+    unawaited(_loadDictionary());
+  }
+
+  Future<void> _loadDictionary() async {
+    try {
+      await dictionary.load();
+      if (!_disposed) {
+        notifyListeners();
+      }
+    } catch (_) {
+      // Dictionary availability should not block the main app shell.
+    }
   }
 
   Future<VideoItem> addVideoFromYoutubeUrl(
@@ -159,7 +177,7 @@ class AppState extends ChangeNotifier {
       return video.copyWith(subtitles: subtitles);
     }).toList();
 
-    await _storage.saveVideos(_videos);
+    _scheduleSaveVideos();
     notifyListeners();
   }
 
@@ -178,7 +196,7 @@ class AppState extends ChangeNotifier {
       );
     }).toList();
 
-    await _storage.saveVideos(_videos);
+    _scheduleSaveVideos();
   }
 
   Future<void> updateSubtitleOffset(
@@ -194,7 +212,7 @@ class AppState extends ChangeNotifier {
       );
     }).toList();
 
-    await _storage.saveVideos(_videos);
+    _scheduleSaveVideos();
     notifyListeners();
   }
 
@@ -209,7 +227,7 @@ class AppState extends ChangeNotifier {
       return video.copyWith(subtitleAutoScrollEnabled: enabled);
     }).toList();
 
-    await _storage.saveVideos(_videos);
+    _scheduleSaveVideos();
     notifyListeners();
   }
 
@@ -228,11 +246,9 @@ class AppState extends ChangeNotifier {
   bool isVocabularySaved(String word, String sourceSubtitleText) {
     final normalized = dictionary.lookup(word).word.toLowerCase();
     return _vocabularyItems.any(
-      (item) {
-        final itemWord = dictionary.lookup(item.word).word.toLowerCase();
-        return itemWord == normalized &&
-            item.sourceSubtitleText == sourceSubtitleText;
-      },
+      (item) =>
+          item.word.toLowerCase() == normalized &&
+          item.sourceSubtitleText == sourceSubtitleText,
     );
   }
 
@@ -252,7 +268,7 @@ class AppState extends ChangeNotifier {
 
     if (existingIndex >= 0) {
       _vocabularyItems = [..._vocabularyItems]..removeAt(existingIndex);
-      await _storage.saveVocabulary(_vocabularyItems);
+      _scheduleSaveVocabulary();
       notifyListeners();
       return false;
     }
@@ -269,14 +285,14 @@ class AppState extends ChangeNotifier {
     );
 
     _vocabularyItems = [item, ..._vocabularyItems];
-    await _storage.saveVocabulary(_vocabularyItems);
+    _scheduleSaveVocabulary();
     notifyListeners();
     return true;
   }
 
   Future<void> removeVocabulary(String id) async {
     _vocabularyItems = _vocabularyItems.where((item) => item.id != id).toList();
-    await _storage.saveVocabulary(_vocabularyItems);
+    _scheduleSaveVocabulary();
     notifyListeners();
   }
 
@@ -284,5 +300,29 @@ class AppState extends ChangeNotifier {
     final result = await dictionary.importFromFile(file);
     notifyListeners();
     return result;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _videosSaveTimer?.cancel();
+    _vocabularySaveTimer?.cancel();
+    unawaited(_storage.saveVideos(_videos));
+    unawaited(_storage.saveVocabulary(_vocabularyItems));
+    super.dispose();
+  }
+
+  void _scheduleSaveVideos() {
+    _videosSaveTimer?.cancel();
+    _videosSaveTimer = Timer(const Duration(milliseconds: 650), () {
+      unawaited(_storage.saveVideos(_videos));
+    });
+  }
+
+  void _scheduleSaveVocabulary() {
+    _vocabularySaveTimer?.cancel();
+    _vocabularySaveTimer = Timer(const Duration(milliseconds: 350), () {
+      unawaited(_storage.saveVocabulary(_vocabularyItems));
+    });
   }
 }

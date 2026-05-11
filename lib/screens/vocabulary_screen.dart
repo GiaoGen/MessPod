@@ -159,14 +159,17 @@ class _VocabularyScreenState extends State<VocabularyScreen> {
   List<_VocabularyGroup> _groupItems(AppState appState) {
     final groups = <String, _VocabularyGroup>{};
     for (final item in appState.vocabularyItems) {
-      final entry = appState.dictionary.lookup(item.word);
-      final key = entry.word.toLowerCase();
+      final word = item.word.trim();
+      if (word.isEmpty) {
+        continue;
+      }
+      final key = word.toLowerCase();
       final group = groups.putIfAbsent(
         key,
         () => _VocabularyGroup(
           key: key,
-          word: entry.word,
-          displayWord: entry.word,
+          word: word,
+          displayWord: word,
           items: [],
         ),
       );

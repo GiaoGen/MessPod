@@ -23,6 +23,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   final ScrollController _subtitleController = ScrollController();
   final YoutubeWebPlaybackController _playbackController =
       YoutubeWebPlaybackController();
+  final ValueNotifier<int> _currentIndexNotifier = ValueNotifier<int>(0);
   int _currentIndex = 0;
   bool _restoredPosition = false;
   String? _initializedVideoId;
@@ -38,7 +39,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     }
 
     _initializedVideoId = video.id;
-    _currentIndex = _indexForSavedSubtitle(video);
+    _setCurrentIndex(_indexForSavedSubtitle(video));
   }
 
   @override
@@ -56,6 +57,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       );
     }
     _subtitleController.dispose();
+    _currentIndexNotifier.dispose();
     super.dispose();
   }
 
@@ -87,7 +89,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       return;
     }
 
-    setState(() => _currentIndex = nextIndex);
+    _setCurrentIndex(nextIndex);
   }
 
   Future<void> _seekTo(SubtitleLine line) async {
@@ -108,17 +110,15 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
         ),
       );
     }
-    if (index >= 0 && mounted) {
-      setState(() => _currentIndex = index);
+    if (index >= 0) {
+      _setCurrentIndex(index);
     }
   }
 
   Future<void> _seekToSavedPosition(VideoItem video) async {
     await _playbackController.seekTo(video.lastPositionSeconds);
     final index = _indexForSavedSubtitle(video);
-    if (mounted) {
-      setState(() => _currentIndex = index);
-    }
+    _setCurrentIndex(index);
   }
 
   Future<void> _markUnderstood(VideoItem video) async {
@@ -137,9 +137,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       final nextIndex = (_currentIndex + 1)
           .clamp(0, video.subtitles.length - 1)
           .toInt();
-      if (mounted) {
-        setState(() => _currentIndex = nextIndex);
-      }
+      _setCurrentIndex(nextIndex);
     }
   }
 
@@ -192,22 +190,29 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
               onPositionChanged: _syncSubtitle,
             ),
           ),
-          SplitSubtitleOverlay(
-            visible: true,
-            video: video,
-            progress: progress,
-            percent: (progress * 100).round(),
-            currentIndex: video.subtitles.isEmpty ? 0 : _boundedIndex(video),
-            subtitleController: _subtitleController,
-            onLineTap: _seekTo,
-            onWordTap: (line, word) => _lookupWord(line, word, video),
-            onNotUnderstood: () => _markNotUnderstood(video),
-            onUnderstood: () => _markUnderstood(video),
-            onOffsetChanged: (offset) =>
-                appState.updateSubtitleOffset(video.id, offset),
-            autoScrollEnabled: video.subtitleAutoScrollEnabled,
-            onAutoScrollChanged: (enabled) =>
-                appState.updateSubtitleAutoScroll(video.id, enabled),
+          ValueListenableBuilder<int>(
+            valueListenable: _currentIndexNotifier,
+            builder: (context, currentIndex, _) {
+              return SplitSubtitleOverlay(
+                visible: true,
+                video: video,
+                progress: progress,
+                percent: (progress * 100).round(),
+                currentIndex: video.subtitles.isEmpty
+                    ? 0
+                    : _boundedIndexFor(video, currentIndex),
+                subtitleController: _subtitleController,
+                onLineTap: _seekTo,
+                onWordTap: (line, word) => _lookupWord(line, word, video),
+                onNotUnderstood: () => _markNotUnderstood(video),
+                onUnderstood: () => _markUnderstood(video),
+                onOffsetChanged: (offset) =>
+                    appState.updateSubtitleOffset(video.id, offset),
+                autoScrollEnabled: video.subtitleAutoScrollEnabled,
+                onAutoScrollChanged: (enabled) =>
+                    appState.updateSubtitleAutoScroll(video.id, enabled),
+              );
+            },
           ),
         ],
       ),
@@ -215,10 +220,14 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   int _boundedIndex(VideoItem video) {
+    return _boundedIndexFor(video, _currentIndex);
+  }
+
+  int _boundedIndexFor(VideoItem video, int index) {
     if (video.subtitles.isEmpty) {
       return 0;
     }
-    return _currentIndex.clamp(0, video.subtitles.length - 1).toInt();
+    return index.clamp(0, video.subtitles.length - 1).toInt();
   }
 
   int _indexForPosition(VideoItem video, double positionSeconds) {
@@ -264,5 +273,15 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     return (line.start - video.subtitleOffsetSeconds)
         .clamp(0.0, double.infinity)
         .toDouble();
+  }
+
+  void _setCurrentIndex(int index) {
+    if (_currentIndex == index) {
+      return;
+    }
+    _currentIndex = index;
+    if (mounted) {
+      _currentIndexNotifier.value = index;
+    }
   }
 }
