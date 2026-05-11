@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/add_video_sheet.dart';
+import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 import 'vocabulary_screen.dart';
@@ -28,6 +29,7 @@ class _MainShellState extends State<MainShell> {
               children: const [
                 HomeScreen(),
                 VocabularyScreen(),
+                CalendarScreen(),
                 SettingsScreen(),
               ],
             ),
@@ -72,9 +74,15 @@ class _MainShellState extends State<MainShell> {
                           ),
                           _BottomTab(
                             selected: _index == 2,
+                            icon: Icons.calendar_month_rounded,
+                            label: '日历',
+                            onTap: () => setState(() => _index = 2),
+                          ),
+                          _BottomTab(
+                            selected: _index == 3,
                             icon: Icons.settings_rounded,
                             label: '设置',
-                            onTap: () => setState(() => _index = 2),
+                            onTap: () => setState(() => _index = 3),
                           ),
                         ],
                       ),
@@ -123,39 +131,23 @@ class _BottomTab extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? scheme.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: selected
-                      ? scheme.onPrimary
-                      : scheme.onSurfaceVariant.withValues(alpha: 0.82),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: selected
-                        ? scheme.onPrimary
-                        : scheme.onSurfaceVariant.withValues(alpha: 0.82),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+      child: Tooltip(
+        message: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? scheme.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Icon(
+              icon,
+              color: selected
+                  ? scheme.onPrimary
+                  : scheme.onSurfaceVariant.withValues(alpha: 0.82),
             ),
           ),
         ),

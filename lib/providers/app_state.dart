@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -52,6 +54,7 @@ class AppState extends ChangeNotifier {
   bool get isReady => _isReady;
 
   Future<void> load() async {
+    await dictionary.load();
     _videos = await _storage.loadVideos();
     _vocabularyItems = await _storage.loadVocabulary();
     _isReady = true;
@@ -223,11 +226,13 @@ class AppState extends ChangeNotifier {
   }
 
   bool isVocabularySaved(String word, String sourceSubtitleText) {
-    final normalized = word.toLowerCase();
+    final normalized = dictionary.lookup(word).word.toLowerCase();
     return _vocabularyItems.any(
-      (item) =>
-          item.word.toLowerCase() == normalized &&
-          item.sourceSubtitleText == sourceSubtitleText,
+      (item) {
+        final itemWord = dictionary.lookup(item.word).word.toLowerCase();
+        return itemWord == normalized &&
+            item.sourceSubtitleText == sourceSubtitleText;
+      },
     );
   }
 
@@ -237,7 +242,8 @@ class AppState extends ChangeNotifier {
     required String sourceVideoTitle,
     required String sourceSubtitleText,
   }) async {
-    final normalized = word.toLowerCase().trim();
+    final entry = dictionary.lookup(word);
+    final normalized = entry.word.toLowerCase().trim();
     final existingIndex = _vocabularyItems.indexWhere(
       (item) =>
           item.word.toLowerCase() == normalized &&
@@ -251,11 +257,11 @@ class AppState extends ChangeNotifier {
       return false;
     }
 
-    final entry = dictionary.lookup(normalized);
     final item = VocabularyItem(
       id: _uuid.v4(),
       word: normalized,
       meaning: entry.meaning,
+      dictionarySource: entry.source,
       sourceVideoId: sourceVideoId,
       sourceVideoTitle: sourceVideoTitle,
       sourceSubtitleText: sourceSubtitleText,
@@ -272,5 +278,11 @@ class AppState extends ChangeNotifier {
     _vocabularyItems = _vocabularyItems.where((item) => item.id != id).toList();
     await _storage.saveVocabulary(_vocabularyItems);
     notifyListeners();
+  }
+
+  Future<DictionaryImportResult> importDictionaryFromFile(File file) async {
+    final result = await dictionary.importFromFile(file);
+    notifyListeners();
+    return result;
   }
 }

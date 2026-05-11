@@ -7,6 +7,7 @@ class VocabularyItem {
     required this.sourceVideoTitle,
     required this.sourceSubtitleText,
     required this.createdAt,
+    this.dictionarySource,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class VocabularyItem {
   final String sourceVideoTitle;
   final String sourceSubtitleText;
   final DateTime createdAt;
+  final String? dictionarySource;
 
   Map<String, dynamic> toJson() {
     return {
@@ -26,6 +28,7 @@ class VocabularyItem {
       'sourceVideoTitle': sourceVideoTitle,
       'sourceSubtitleText': sourceSubtitleText,
       'createdAt': createdAt.toIso8601String(),
+      'dictionarySource': dictionarySource,
     };
   }
 
@@ -38,6 +41,7 @@ class VocabularyItem {
       sourceVideoTitle: json['sourceVideoTitle'] as String,
       sourceSubtitleText: json['sourceSubtitleText'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      dictionarySource: json['dictionarySource'] as String?,
     );
   }
 }
