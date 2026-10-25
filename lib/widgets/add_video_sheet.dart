@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_state.dart';
-import '../services/transcript_api_service.dart';
+import '../services/transcript_payload.dart';
 import 'progress_bar.dart';
 
 Future<void> showAddVideoSheet(BuildContext context) {
@@ -79,7 +79,7 @@ class _AddVideoSheetState extends State<AddVideoSheet> {
         return;
       }
       setState(() {
-        _error = '解析失败，请确认 FastAPI 服务已启动且视频有字幕';
+        _error = '解析失败，请确认视频有字幕，或先在设置里完成 YouTube 验证';
         _isParsing = false;
       });
     }

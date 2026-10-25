@@ -38,7 +38,7 @@ class CalendarScreen extends StatelessWidget {
                   icon: Icons.timer_rounded,
                   title: '总学习时长',
                   value: _formatDuration(appState.totalStudySeconds),
-                  progress: appState.totalStudySeconds == 0 ? 0.0 : 1.0,
+                  emphasizeValue: true,
                 ),
               ),
               const SizedBox(width: 12),
@@ -106,13 +106,15 @@ class _ProgressStatCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
-    required this.progress,
+    this.progress,
+    this.emphasizeValue = false,
   });
 
   final IconData icon;
   final String title;
   final String value;
-  final double progress;
+  final double? progress;
+  final bool emphasizeValue;
 
   @override
   Widget build(BuildContext context) {
@@ -142,21 +144,40 @@ class _ProgressStatCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               SizedBox(
-                height: 48,
-                child: Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontSize: 19,
-                    height: 1.2,
-                    fontWeight: FontWeight.w900,
-                  ),
+                height: emphasizeValue ? 56 : 48,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: emphasizeValue
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: scheme.onSurface,
+                              fontSize: 30,
+                              height: 1.05,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          value,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: scheme.onSurface,
+                            fontSize: 19,
+                            height: 1.2,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                 ),
               ),
               const Spacer(),
-              ProgressBar(value: progress),
+              if (progress != null) ProgressBar(value: progress!),
             ],
           ),
         ),

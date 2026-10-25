@@ -9,7 +9,8 @@ import '../models/video_item.dart';
 import '../models/vocabulary_item.dart';
 import '../services/dictionary_service.dart';
 import '../services/local_storage_service.dart';
-import '../services/transcript_api_service.dart';
+import '../services/local_youtube_transcript_service.dart';
+import '../services/transcript_payload.dart';
 import '../services/youtube_service.dart';
 
 class ParseStep {
@@ -31,17 +32,18 @@ class AppState extends ChangeNotifier {
     LocalStorageService? localStorageService,
     YoutubeService? youtubeService,
     DictionaryService? dictionaryService,
-    TranscriptApiService? transcriptApiService,
+    LocalYoutubeTranscriptService? localTranscriptService,
   }) : _storage = localStorageService ?? LocalStorageService(),
        _youtube = youtubeService ?? YoutubeService(),
-       _transcriptApi = transcriptApiService ?? TranscriptApiService(),
+       _localTranscript =
+           localTranscriptService ?? LocalYoutubeTranscriptService(),
        dictionary = dictionaryService ?? DictionaryService() {
     load();
   }
 
   final LocalStorageService _storage;
   final YoutubeService _youtube;
-  final TranscriptApiService _transcriptApi;
+  final LocalYoutubeTranscriptService _localTranscript;
   final DictionaryService dictionary;
   final Uuid _uuid = const Uuid();
 
@@ -96,7 +98,7 @@ class AppState extends ChangeNotifier {
     String url, {
     ValueChanged<ParseStep>? onProgress,
   }) async {
-    const steps = ['正在解析链接', '正在获取视频信息', '正在获取字幕', '正在保存', '完成'];
+    const steps = ['正在解析链接', '正在获取视频信息', '正在本地解析字幕', '正在保存', '完成'];
 
     void report(int index) {
       onProgress?.call(
@@ -115,7 +117,7 @@ class AppState extends ChangeNotifier {
     await Future<void>.delayed(const Duration(milliseconds: 120));
 
     report(2);
-    final payload = await _transcriptApi.fetchVideo(videoId);
+    final payload = await _fetchTranscriptPayload(videoId);
     if (payload.subtitles.isEmpty) {
       throw const TranscriptApiException('没有获取到字幕');
     }
@@ -153,6 +155,14 @@ class AppState extends ChangeNotifier {
     report(4);
     await Future<void>.delayed(const Duration(milliseconds: 180));
     return video;
+  }
+
+  Future<TranscriptVideoPayload> _fetchTranscriptPayload(String videoId) async {
+    try {
+      return await _localTranscript.fetchVideo(videoId);
+    } catch (error) {
+      throw TranscriptApiException('本地字幕解析失败：$error');
+    }
   }
 
   VideoItem? findVideo(String videoId) {

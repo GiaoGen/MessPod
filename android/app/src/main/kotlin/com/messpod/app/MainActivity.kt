@@ -1,4 +1,4 @@
-package com.example.ytpodcast
+package com.messpod.app
 
 import android.app.Activity
 import android.content.Intent

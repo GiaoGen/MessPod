@@ -10,14 +10,64 @@ class YoutubeWebPlaybackController {
     _controller = controller;
   }
 
-  Future<void> play() async {
-    await _runVideoCommand('''
-      const video = document.querySelector("video");
-      if (video) {
-        video.muted = false;
-        video.volume = 1;
-        video.play();
-      }
+  Future<bool> play() async {
+    return _runVideoCommandForBool('''
+      (async () => {
+        const findVideo = () => document.querySelector("video");
+        const unmute = (video) => {
+          video.muted = false;
+          video.volume = 1;
+        };
+        const clickYoutubePlayButton = () => {
+          const labels = [
+            "Play",
+            "播放",
+            "繼續播放",
+            "继续播放",
+            "播放视频"
+          ];
+          const buttons = Array.from(document.querySelectorAll("button"));
+          const button = buttons.find((item) => {
+            const text = [
+              item.getAttribute("aria-label"),
+              item.getAttribute("title")
+            ].filter(Boolean).join(" ");
+            return labels.some((label) => text.includes(label));
+          });
+          if (button) {
+            button.click();
+            return true;
+          }
+          const largeButton = document.querySelector(".ytp-large-play-button");
+          if (largeButton) {
+            largeButton.click();
+            return true;
+          }
+          return false;
+        };
+        const attemptPlay = async () => {
+          const video = findVideo();
+          if (!video) return false;
+          unmute(video);
+          if (!video.paused) return true;
+          try {
+            const promise = video.play();
+            if (promise && typeof promise.then === "function") {
+              await promise;
+            }
+          } catch (_) {}
+          if (video.paused) {
+            clickYoutubePlayButton();
+          }
+          return true;
+        };
+        await attemptPlay();
+        await new Promise((resolve) => setTimeout(resolve, 160));
+        await attemptPlay();
+        await new Promise((resolve) => setTimeout(resolve, 320));
+        const video = findVideo();
+        return !!video && !video.paused;
+      })();
     ''');
   }
 
@@ -83,6 +133,23 @@ class YoutubeWebPlaybackController {
       await controller.runJavaScript(command);
     } catch (_) {
       // The YouTube mobile page can replace its video node while loading.
+    }
+  }
+
+  Future<bool> _runVideoCommandForBool(String command) async {
+    final controller = _controller;
+    if (controller == null) {
+      return false;
+    }
+
+    try {
+      final result = await controller.runJavaScriptReturningResult(command);
+      if (result is bool) {
+        return result;
+      }
+      return result.toString() == 'true';
+    } catch (_) {
+      return false;
     }
   }
 }

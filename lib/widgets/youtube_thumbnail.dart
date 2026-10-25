@@ -21,10 +21,6 @@ class YoutubeThumbnail extends StatefulWidget {
 
 class _YoutubeThumbnailState extends State<YoutubeThumbnail> {
   static const _directoryChannel = MethodChannel('ytpodcast/app_dirs');
-  static const _apiBaseUrl = String.fromEnvironment(
-    'TRANSCRIPT_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000',
-  );
 
   static const _headers = {
     'User-Agent':
@@ -64,7 +60,6 @@ class _YoutubeThumbnailState extends State<YoutubeThumbnail> {
       'https://i.ytimg.com/vi_webp/${widget.videoId}/hqdefault.webp',
       'https://i.ytimg.com/vi/${widget.videoId}/mqdefault.jpg',
       'https://img.youtube.com/vi/${widget.videoId}/0.jpg',
-      '$_apiBaseUrl/videos/${widget.videoId}/thumbnail',
     ].where((url) => url.trim().isNotEmpty).toList();
 
     return candidates.toSet().toList();

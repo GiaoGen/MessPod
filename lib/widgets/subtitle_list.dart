@@ -152,7 +152,7 @@ class _SubtitleListState extends State<SubtitleList> {
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Text(
-            '字幕服务待接入\n后续由 FastAPI 获取 YouTube Transcript',
+            '暂无字幕\n请确认该视频有可用字幕',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: scheme.primary,

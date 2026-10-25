@@ -66,10 +66,7 @@ class SubtitleLineWidget extends StatelessWidget {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: clickable
-                          ? () {
-                              onTap();
-                              onWordTap(word);
-                            }
+                          ? () => onWordTap(word)
                           : onTap,
                       child: Text(
                         token,

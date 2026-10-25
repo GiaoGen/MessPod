@@ -22,6 +22,8 @@ class SplitSubtitleOverlay extends StatefulWidget {
     required this.onOffsetChanged,
     required this.autoScrollEnabled,
     required this.onAutoScrollChanged,
+    this.notUnderstoodIsResume = false,
+    this.understoodIsResume = false,
   });
 
   final bool visible;
@@ -37,6 +39,8 @@ class SplitSubtitleOverlay extends StatefulWidget {
   final ValueChanged<double> onOffsetChanged;
   final bool autoScrollEnabled;
   final ValueChanged<bool> onAutoScrollChanged;
+  final bool notUnderstoodIsResume;
+  final bool understoodIsResume;
 
   static const double subtitleDrawerHeight = 413;
   static const double topLogoCoverHeight = 48;
@@ -157,6 +161,10 @@ class _SplitSubtitleOverlayState extends State<SplitSubtitleOverlay> {
             child: BottomUnderstandingControls(
               onNotUnderstood: widget.onNotUnderstood,
               onUnderstood: widget.onUnderstood,
+              notUnderstoodLabel:
+                  widget.notUnderstoodIsResume ? '▶ 继续播放' : '❌ 不懂',
+              understoodLabel:
+                  widget.understoodIsResume ? '▶ 继续播放' : '✅ 懂了',
             ),
           ),
         ),

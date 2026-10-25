@@ -7,6 +7,7 @@ import '../providers/app_state.dart';
 import '../services/dictionary_file_picker.dart';
 import '../services/dictionary_service.dart';
 import 'youtube_login_screen.dart';
+import 'youtube_verification_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -232,6 +233,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label: const Text('导入词典'),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SettingsCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              minTileHeight: 62,
+              leading: Icon(
+                Icons.verified_user_rounded,
+                color: scheme.primary,
+              ),
+              title: Text(
+                'YouTube 验证',
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              subtitle: Text(
+                appState.videos.isEmpty
+                    ? '打开 YouTube 完成登录或验证'
+                    : '打开最近视频完成登录或人机验证',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: scheme.onSurfaceVariant,
+              ),
+              onTap: () {
+                final latestVideoId = appState.videos.isEmpty
+                    ? null
+                    : appState.videos.first.youtubeVideoId;
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        YoutubeVerificationScreen(videoId: latestVideoId),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 14),

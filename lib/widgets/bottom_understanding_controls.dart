@@ -5,10 +5,14 @@ class BottomUnderstandingControls extends StatelessWidget {
     super.key,
     required this.onNotUnderstood,
     required this.onUnderstood,
+    this.notUnderstoodLabel = '❌ 不懂',
+    this.understoodLabel = '✅ 懂了',
   });
 
   final VoidCallback onNotUnderstood;
   final VoidCallback onUnderstood;
+  final String notUnderstoodLabel;
+  final String understoodLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +32,14 @@ class BottomUnderstandingControls extends StatelessWidget {
                   ),
                 ),
                 onPressed: onNotUnderstood,
-                child: const Text(
-                  '❌ 不懂',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                child: Text(
+                  notUnderstoodLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -48,9 +57,14 @@ class BottomUnderstandingControls extends StatelessWidget {
                   ),
                 ),
                 onPressed: onUnderstood,
-                child: const Text(
-                  '✅ 懂了',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                child: Text(
+                  understoodLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),

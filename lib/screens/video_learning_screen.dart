@@ -28,6 +28,8 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   int _currentIndex = 0;
   bool _restoredPosition = false;
   bool _contentMounted = false;
+  bool _pausedForReview = false;
+  bool _understoodResumeEnabled = false;
   String? _initializedVideoId;
   AppState? _appState;
 
@@ -135,6 +137,11 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   Future<void> _markUnderstood(VideoItem video) async {
+    if (_understoodResumeEnabled) {
+      await _resumePlayback(video);
+      return;
+    }
+
     if (video.subtitles.isEmpty) {
       return;
     }
@@ -146,6 +153,11 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       SubtitleStatus.understood,
     );
 
+    if (_pausedForReview) {
+      setState(() => _understoodResumeEnabled = true);
+      return;
+    }
+
     if (!video.subtitleAutoScrollEnabled) {
       final nextIndex = (_currentIndex + 1)
           .clamp(0, video.subtitles.length - 1)
@@ -155,6 +167,11 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   Future<void> _markNotUnderstood(VideoItem video) async {
+    if (_pausedForReview) {
+      await _resumePlayback(video);
+      return;
+    }
+
     if (video.subtitles.isEmpty) {
       return;
     }
@@ -166,6 +183,30 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       SubtitleStatus.notUnderstood,
     );
     await _playbackController.pause();
+    if (mounted) {
+      setState(() {
+        _pausedForReview = true;
+        _understoodResumeEnabled = false;
+      });
+    }
+  }
+
+  Future<void> _resumePlayback(VideoItem video) async {
+    if (mounted) {
+      setState(() {
+        _pausedForReview = false;
+        _understoodResumeEnabled = false;
+      });
+    }
+    if (video.subtitles.isNotEmpty) {
+      final nextIndex = (_currentIndex + 1)
+          .clamp(0, video.subtitles.length - 1)
+          .toInt();
+      final nextLine = video.subtitles[nextIndex];
+      _setCurrentIndex(nextIndex);
+      await _seekTo(nextLine);
+    }
+    await _playbackController.play();
   }
 
   Future<void> _lookupWord(
@@ -226,6 +267,8 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                       autoScrollEnabled: video.subtitleAutoScrollEnabled,
                       onAutoScrollChanged: (enabled) =>
                           appState.updateSubtitleAutoScroll(video.id, enabled),
+                      notUnderstoodIsResume: _pausedForReview,
+                      understoodIsResume: _understoodResumeEnabled,
                     );
                   },
                 ),
